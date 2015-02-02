@@ -7,6 +7,7 @@ void setup()
 {
   Serial.begin(9600);	// Initialize Serial Communication and set rate
 						// Rates: 300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, or 115200 bits/second
+  pinMode(13, OUTPUT);
 }
 
 void loop()
@@ -20,5 +21,12 @@ void loop()
   Serial.print(sensor,DEC);
   Serial.print("   degrees: ");
   Serial.println(degrees,DEC);
-  delay(10);	// Delay in ms before next reading                    
+  delay(10);	// Delay in ms before next reading
+  
+  //Code for outputting HIGH and LOW voltage values depending on the flex sensors degree reading 
+  if (degrees > 30)
+    digitalWrite(13, HIGH);
+  else
+  	digitalWrite(13, LOW);
+  
 }
