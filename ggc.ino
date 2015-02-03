@@ -3,7 +3,7 @@
 // ECE 4012 - Spring 2015
 // Jonathan Talbott, Dan Russell, Justin Denard, Brian Nemsick, Erin Hanson
 
-#include "flexSensors.h""
+#include "flexSensors.h"
 
 using namespace std;
 
