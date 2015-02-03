@@ -6,7 +6,7 @@
 void setup()
 {
   Serial.begin(9600);	// Initialize Serial Communication and set 
-						// Rates: 300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, or 115200 bits/second
+                        // Rates: 300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, or 115200 bits/second
   pinMode(13, OUTPUT);
 }
 
