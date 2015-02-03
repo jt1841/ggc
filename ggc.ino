@@ -14,10 +14,10 @@ void loop()
 {
   int sensor, degrees;
   
-  sensor = analogRead(0);	// Read voltage from analog input 0
-  degrees = map(sensor, 768, 853, 0, 90);	// Convert reading to degrees. Min and max values will be unique to each flex sensor
+  sensor = analogRead(0);   // Read voltage from analog input 0
+  degrees = map(sensor, 768, 853, 0, 90);   // Convert reading to degrees. Min and max values will be unique to each flex sensor
 
-  Serial.print("analog input: "); // Print results for debugging
+  Serial.print("analog input: ");   // Print results for debugging
   Serial.print(sensor,DEC);
   Serial.print("   degrees: ");
   Serial.println(degrees,DEC);
