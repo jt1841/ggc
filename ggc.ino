@@ -5,7 +5,7 @@
 
 void setup()
 {
-  Serial.begin(9600);	// Initialize Serial Communication and set rate
+  Serial.begin(9600);	// Initialize Serial Communication and set 
 						// Rates: 300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, or 115200 bits/second
   pinMode(13, OUTPUT);
 }
@@ -27,6 +27,6 @@ void loop()
   if (degrees > 30)
     digitalWrite(13, HIGH);
   else
-  	digitalWrite(13, LOW);
+    digitalWrite(13, LOW);
   
 }
