@@ -9,10 +9,10 @@ using namespace std;
 
 // Global Variables
 flexSensors flex0(0,803,945); // Declare flex sensor
-flexSensors flex1(1,815,950);
-flexSensors flex2(2,769,920);
-flexSensors flex3(3,771,940);
-flexSensors flex4(4,855,955);
+flexSensors flex1(0,815,950);
+flexSensors flex2(0,769,920);
+flexSensors flex3(0,771,940);
+flexSensors flex4(0,855,955);
 
 void setup()
 {
