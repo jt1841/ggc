@@ -8,7 +8,11 @@
 using namespace std;
 
 // Global Variables
-flexSensors flex0(0,700,900); // Declare flex sensor
+flexSensors flex0(0,803,945); // Declare flex sensor
+flexSensors flex1(1,815,950);
+flexSensors flex2(2,769,920);
+flexSensors flex3(3,771,940);
+flexSensors flex4(4,855,955);
 
 void setup()
 {
@@ -20,7 +24,17 @@ void setup()
 void loop()
 {
     flex0.read();
+    flex1.read();
+    flex2.read();
+    flex3.read();
+    flex4.read();
     flex0.display();
+    flex1.display();
+    flex2.display();
+    flex3.display();
+    flex4.display();
+    Serial.println("");
+    delay(10);
     
     // Code for outputting HIGH and LOW voltage values depending on the flex sensors degree reading 
     // Replace with function in "control" class

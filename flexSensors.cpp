@@ -23,7 +23,21 @@ flexSensors::flexSensors(int pinNum, int min, int max)
 
 void flexSensors::read()
 {   // Read raw input value from analog pin
-    rawValue = analogRead(pin);
+  long int x = 0;
+  for(int i = 0; i<100; i++)
+  {
+    x += analogRead(pin); //This gets a small moving average
+  }
+    rawValue = x/100;
+    
+    if(rawValue<minBend)
+      rawValue = minBend;
+      
+    if(rawValue>maxBend)
+      rawValue = maxBend;
+    
+    
+    
 }
 
 double flexSensors::angle()
@@ -33,10 +47,11 @@ double flexSensors::angle()
 
 void flexSensors::display()
 {
+    int numDigits = rawValue > 0 ? (int) log10 ((double) rawValue) + 1 : 1;
     // Display output in Serial Monitor for debugging and determining the max and min bend values
-    Serial.print("analog input: ");   // Print results for debugging
-    Serial.print(rawValue, DEC);
-    Serial.print("   degrees: ");
-    Serial.println(angle(), DEC);
+    if(numDigits == 3)
+    {
+      Serial.print(rawValue);
+    }
 }
 
