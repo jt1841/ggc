@@ -4,20 +4,16 @@
 flexSensors::flexSensors()
 {   //Default constructor
     pin = 0;
-    minBend = 768;
-    maxBend = 853;
-    rawValue = 0;
-    angleValue = 90;
+    threshold = 950;
+    value = 0;
 }
 
-flexSensors::flexSensors(int pinNum, int min, int max)
+flexSensors::flexSensors(int _pin, int _threshold)
 {
     // Constructor with arguments
-    pin = pinNum;   
-    minBend = min;
-    maxBend = max;
-    rawValue = 0;
-    angleValue = 90;
+    pin = _pin;  
+    threshold = _threshold; 
+    value = 0;
 }
 
 
@@ -28,30 +24,27 @@ void flexSensors::read()
   {
     x += analogRead(pin); //This gets a small moving average
   }
-    rawValue = x/100;
-    
-    if(rawValue<minBend)
-      rawValue = minBend;
-      
-    if(rawValue>maxBend)
-      rawValue = maxBend;
-    
-    
-    
-}
-
-double flexSensors::angle()
-{   // Return current angle of flex sensor in degrees
-    return map(rawValue, minBend, maxBend, 0, 90);
+     
+  x /= 100;
+  
+  int numDigits = x > 0 ? (int) log10 ((double) x) + 1 : 1;
+  
+    if(numDigits == 3)
+      value = x;
+  
 }
 
 void flexSensors::display()
 {
-    int numDigits = rawValue > 0 ? (int) log10 ((double) rawValue) + 1 : 1;
+    int numDigits = value > 0 ? (int) log10 ((double) value) + 1 : 1;
     // Display output in Serial Monitor for debugging and determining the max and min bend values
-    if(numDigits == 3)
+    if(numDigits <= 3)
     {
-      Serial.print(rawValue);
+      Serial.print(value);
+    }
+    else
+    {
+      Serial.print(999);
     }
 }
 
