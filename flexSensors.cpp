@@ -5,7 +5,9 @@ flexSensors::flexSensors()
 {   //Default constructor
     pin = 0;
     threshold = 950;
+    rest = 0;
     value = 0;
+    active = 0;
 }
 
 flexSensors::flexSensors(int _pin, int _threshold)
@@ -13,7 +15,9 @@ flexSensors::flexSensors(int _pin, int _threshold)
     // Constructor with arguments
     pin = _pin;  
     threshold = _threshold; 
+    rest = 0;
     value = 0;
+    active = 0;
 }
 
 
@@ -31,6 +35,17 @@ void flexSensors::read()
   
     if(numDigits == 3)
       value = x;
+      
+  if(threshold > rest)
+  {
+    if (value > (threshold - 25)){active = 1;}
+    else{active = 0;}
+  }
+  else
+  {
+    if(value < (threshold + 25)){active = 1;}
+    else{active = 0;} 
+  }
   
 }
 

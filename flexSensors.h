@@ -12,6 +12,8 @@ public:
     void display(); // Display raw input value of sensor in Serial Manager
     int pin;    // Analog input pin 0-5
     int value;   // Raw value read from analog input pin (range: 0-1023)
-    int threshold;    // Bend threshold value for flex sensor    
+    int threshold;    // Bend threshold value for flex sensor  
+    int rest;
+    boolean active;  
 };
 
