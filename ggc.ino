@@ -37,9 +37,9 @@ boolean forwardState[5] = {0,1,1,1,1};
 boolean backwardState[5] = {1,1,1,1,1};
 boolean flexState[5] = {0};
 
-String flexOutput {"null"}; // For debugging the outputs
-String gyroOutput {"null"};
-String processingOutput {"null"};
+String flexOutput = ""; // For debugging the outputs
+String gyroOutput = "";
+String processingOutput = "";
 
 //Functions
 void flexCheck();
@@ -132,7 +132,7 @@ void flexCheck()
     }
   }
 
-  if (foward != 1)
+  if (forward != 1)
   {
 	  for(int j = 0; j < 5; j++)
 	  {
@@ -148,8 +148,8 @@ void flexCheck()
 	  }
    }
    
-   if (forward) {backward == 0};
-   if (backward) {forward == 0};
+   if (forward) {backward == 0;}
+   if (backward) {forward == 0;}
 
   if(backward)
   {
@@ -273,7 +273,7 @@ void onOff()
     modeCount += 1;
   } 
 
-  if (!flex0.active || flex1.active || flex2.active || || felx3.active || flex4.active || modeCount == 31)
+  if (!flex0.active || flex1.active || flex2.active || flex3.active || flex4.active || modeCount == 31)
   {
     modeCount = 0;
   }
