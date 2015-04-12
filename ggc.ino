@@ -5,101 +5,119 @@
 #include <Wire.h>
 #include "flexSensors.h"
 #include <LiquidCrystal.h>
-#include <TimerOne.h>
+//#include <TimerOne.h>
+#include <EEPROM.h>
 
-#define LEFTPIN 10
-#define RIGHTPIN 11
-#define FORPIN 12
-#define BACKPIN 13
+//EEPROM Value Storage
+// Address //     Variable        //    
+// 0       // flex0.threshold     //
+// 1       // flex1.threshold     //
+// 2       // flex2.threshold     //
+// 3       // flex3.threshold     //
+// 4       // flex4.threshold     //
+// 5       // gyroLeftThreshold   //
+// 6       // gyroRightThreshold  //
+// 7       // forwardState[0]     //
+// 8       // forwardState[1]     //
+// 9       // forwardState[2]     //
+// 10      // forwardState[3]     //
+// 11      // forwardState[4]     //
+// 12      // backwardState[0]    //
+// 13      // backwardState[1]    //
+// 14      // backwardState[2]    //
+// 15      // backwardState[3]    //
+// 16      // backwardState[4]    //
+
+#define LEFTPIN 13
+#define RIGHTPIN 12
+#define FORPIN 11
+#define BACKPIN 10
 #define HIGHV 255
 #define LOWV 0
 
 using namespace std;
 
 // Global Variables
-flexSensors flex0(0,980); // Declare flex sensor
-flexSensors flex1(1,980);
-flexSensors flex2(2,980);
-flexSensors flex3(3,980);
-flexSensors flex4(4,980);
+flexSensors flex0(0,834,1004,EEPROM.read(0)); // Declare flex sensor
+flexSensors flex1(1,922,1012,EEPROM.read(1));
+flexSensors flex2(2,963,1010,EEPROM.read(2));
+flexSensors flex3(3,874,999,EEPROM.read(3));
+flexSensors flex4(4,842,1005,EEPROM.read(4));
+
+/*  773-1004, 834
+904-1012, 922
+934-1010, 963
+795-999, 874
+768-1005, 842 */
 
 const int MPU {0x68};  // I2C address of the MPU-6050
-int gyroX {0};
-int gyroThreshold {10000};
+double gyroX {0.0};
+int gyroLeftThreshold {EEPROM.read(5)};
+int gyroRightThreshold {-EEPROM.read(6)};
 int modeCount {0};
+float debugGUI = 0;
 
-boolean mode {0};
+boolean mode {1};
 boolean left {0};
 boolean right {0};
 boolean forward {0};
 boolean backward {0};
-boolean forwardState[5] = {0,1,1,1,1};
-boolean backwardState[5] = {1,1,1,1,1};
+boolean forwardState[5] = {EEPROM.read(7),EEPROM.read(8),EEPROM.read(9),EEPROM.read(10),EEPROM.read(11)};
+boolean backwardState[5] = {EEPROM.read(12),EEPROM.read(13),EEPROM.read(14),EEPROM.read(15),EEPROM.read(16)};
 boolean flexState[5] = {0};
 
-String flexOutput = ""; // For debugging the outputs
-String gyroOutput = "";
 String processingOutput = "";
 
 //Functions
 void flexCheck();
 void gyroCheck();
-void processingDemo();
+void processingSetup();
+void processingCommand();
 void PWMout();
 void onOff();
-void calibrationSetup();
-LiquidCrystal lcd(8, 7, 4, 5, 1, 0);
+void calibrationSetupLCD();
+void gyroSetup();
+void PWMSetup();
+//LiquidCrystal lcd(8, 7, 4, 5, 1, 0);
 
 void setup()
 {  
-  //LCD Setup
-  lcd.begin(16, 2);
-
-  //Gyro Setup
-  Wire.begin();
-  Wire.beginTransmission(0x68);
-  Wire.write(0x6B);  // PWR_MGMT_1 register
-  Wire.write(0);     // set to zero (wakes up the MPU-6050)
-  Wire.endTransmission(true);  
-
-  Serial.begin(9600);	// Initialize Serial Communication and set 
-  // Rates: 300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, or 115200 bits/second
-
-  // Setup PWM output pins
-  pinMode(LEFTPIN, OUTPUT);
-  pinMode(RIGHTPIN, OUTPUT);
-  pinMode(FORPIN, OUTPUT);
-  pinMode(BACKPIN, OUTPUT);
+  Serial.begin(9600);
+  //while(!Serial){;}
+  
+  gyroSetup();
+  PWMSetup();
 
   //Timer1 Setup
-  Timer1.initialize(100000);
-  Timer1.attachInterrupt(onOff);
+//Timer1.initialize(10000);
+//  Timer1.attachInterrupt(processingSetup);
 
-  calibrationSetup();
+  //calibrationSetupLCD();
+  while(!Serial){;}
+  
+  for (int i = 0; i < 16; i++)
+  {
+    Serial.print(EEPROM.read(i));
+    Serial.print(",");
+  }
+  Serial.println();
 
 }
 
 void loop()
 {
-
+ // Serial.println(EEPROM.read(0));
   flexCheck();
   gyroCheck();
   PWMout(); //Call "check" functions before this
+  processingSetup();
+  processingCommand();
 
   //Debugging and Demo - Call after all other functions
   //Serial.println(flexOutput + " " + gyroOutput); // For Serial Manager Output
-  //Serial.println(String(mode) + "," + String(modeCount));
-  // processingDemo(); // Output for Processing
-  //Serial.println(String(flex0.threshold));
-
-  //LCD
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print(flexOutput);
-  lcd.setCursor(0,1);
-  lcd.print(gyroOutput);
-  lcd.setCursor(13,0);
-  mode ? lcd.print("ON") : lcd.print("OFF");
+  //Serial.println((mode) + "," + (modeCount));
+  // processingSetup(); // Output for Processing
+  //Serial.println((flex0.threshold));
 
 }
 
@@ -111,6 +129,8 @@ void flexCheck()
   flex2.read();
   flex3.read();
   flex4.read();
+  
+
 
   flexState[0] = flex0.active;
   flexState[1] = flex1.active;
@@ -124,6 +144,7 @@ void flexCheck()
     if (forwardState[j] == flexState[j])
     {
 	  backward = 0;
+          forward = 1;
     }
     else
     {
@@ -151,20 +172,6 @@ void flexCheck()
    if (forward) {backward == 0;}
    if (backward) {forward == 0;}
 
-  if(backward)
-  {
-    flexOutput = "backward";
-  }
-  else if(forward)
-  {
-    flexOutput = "forward";
-  }
-  else
-  {
-    flexOutput = "rest";
-  } 
-
-
 }
 
 void gyroCheck()
@@ -181,23 +188,28 @@ void gyroCheck()
     sampleGyro += Wire.read()<<8|Wire.read();  // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)   
   }
 
-  gyroX = sampleGyro/100; //Take average value
+  gyroX = sampleGyro/100.0; //Take average value
 
-  if(gyroX > gyroThreshold)
+  if (gyroX > 15000)
+    gyroX = 150000;
+  else if (gyroX < -15000)
+    gyroX = -15000;
+    
+  //Normalize to degrees
+    gyroX = gyroX/15000 * 90;
+
+  if(gyroX > gyroLeftThreshold)
   {
-    gyroOutput = "left";
     left = 1;
     right = 0;
   }
-  else if(gyroX < -gyroThreshold)
+  else if(gyroX < gyroRightThreshold)
   {
-    gyroOutput = "right";
     right = 1;
     left = 0;
   }
   else
   {
-    gyroOutput = "straight";
     left = 0;
     right = 0;
   }
@@ -205,21 +217,61 @@ void gyroCheck()
 
 }
 
-void processingDemo()
+void processingSetup()
 {
-  processingOutput = String(flex0.value) + "," + String(flex1.value) + "," + String(flex2.value) + ",g," + String(gyroX);
-  Serial.println(processingOutput);
+  
+/*  processingOutput = "value," + \
+  String(flex0.value) + "," + \
+  String(flex1.value) + "," + \
+  String(flex2.value) + "," + \
+  String(flex3.value) + "," + \
+  String(flex4.value) + "," + \
+  String(gyroX);
 
+  processingOutput = processingOutput + ",active," + \
+  String(flex0.active) + "," + \
+  String(flex1.active) + "," + \
+  String(flex2.active) + "," + \
+  String(flex3.active) + "," + \
+  String(flex4.active);
+  
+  processingOutput = processingOutput + ",command," + \
+  String(left) + "," + \
+  String(right) + "," +\
+  String(forward) + "," +\
+  String(backward) + ",";
+  Serial.println(processingOutput); */
+  
+  processingOutput = "value," + \
+  String(debugGUI+1) + "," + \
+  String(debugGUI+2) + "," + \
+  String(debugGUI+3) + "," + \
+  String(debugGUI+4) + "," + \
+  String(debugGUI) + "," + \
+  String((debugGUI - 50)/50 * 90 );
+
+  processingOutput = processingOutput + ",active," + \
+  String(flex0.active) + "," + \
+  String(flex1.active) + "," + \
+  String(flex2.active) + "," + \
+  String(flex3.active) + "," + \
+  String(flex4.active);
+  
+  processingOutput = processingOutput + ",command," + \
+  String(left) + "," + \
+  String(right) + "," +\
+  String(forward) + "," +\
+  String(backward);
+  Serial.println(processingOutput);
+  
+ debugGUI++;
+ 
+ if(debugGUI > 100)
+    debugGUI = 0;
 }
 
 void PWMout()
 {
-
-  if(modeCount > 29)
-  {
-    mode = !mode; 
-  }
-
 
   if(backward)
   {
@@ -268,307 +320,93 @@ void PWMout()
 
 void onOff()
 {
-  if(flex0.active && !flex1.active && !flex2.active && !flex3.active && !flex4.active)
-  {
-    modeCount += 1;
-  } 
-
-  if (!flex0.active || flex1.active || flex2.active || flex3.active || flex4.active || modeCount == 31)
-  {
-    modeCount = 0;
-  }
+// Add on off code for the button here
 }
 
-void calibrationSetup()
+void gyroSetup()
+{
+  //Gyro Setup
+  Wire.begin();
+  Wire.beginTransmission(0x68);
+  Wire.write(0x6B);  // PWR_MGMT_1 register
+  Wire.write(0);     // set to zero (wakes up the MPU-6050)
+  Wire.endTransmission(true); 
+}
+
+void PWMSetup()
+{
+  pinMode(LEFTPIN, OUTPUT);
+  pinMode(RIGHTPIN, OUTPUT);
+  pinMode(FORPIN, OUTPUT);
+  pinMode(BACKPIN, OUTPUT); 
+}
+
+void readEEPROMData()
 {
 
-  // Startup screen
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("187 Days: GGC");
-  lcd.setCursor(0,1);
-  lcd.print("Tilt Left");
-
-  // Wait for users to tilt hand to the left
-  while(!left)
-  {
-    gyroCheck();
-  }
-
-  while(1)
-  {
-
-    lcd.clear();
-    
-	// Get rest hand state and wait for user to tilt right
-    while(!right)
-    {
-      gyroCheck();
-      flex0.read();
-      flex1.read();
-      flex2.read();
-      lcd.setCursor(0,0);
-      lcd.print("Rest Hand: " + String(flex0.value));
-      lcd.setCursor(0,1);
-      lcd.print("Right to Confirm");
-      flex0.rest = flex0.value;
-      flex1.rest = flex1.value;
-      flex2.rest = flex2.value;
-	  flex3.rest = flex3.value;
-	  flex4.rest = flex4.value;
-      delay(10);
-    }
-    
-	//Print to serial for debugging
-    Serial.println("Thumb Rest = " + String(flex0.rest));
-	Serial.println("Index Rest = " + String(flex1.rest));
-    Serial.println("Middle Rest = " + String(flex2.rest));
-    Serial.println("Ring Rest = " + String(flex3.rest));
-	Serial.println("Pinky Rest = " + String(flex4.rest));
-
-    lcd.clear();
-
-	//Get thumb flex state and wait for user to confirm by tilting left
-    while(!left)
-    {
-      gyroCheck();
-      flex0.read();
-      lcd.setCursor(0,0);
-      lcd.print("Flex Thumb: " + String(flex0.value));
-      lcd.setCursor(0,1);
-      lcd.print("Left to Confirm");
-      flex0.threshold = flex0.value;
-      delay(10);
-    }
-	
-	// Print to serial for debugging
-    Serial.println("Thumb Flex = " + String(flex0.threshold));
-    lcd.clear();
-
-	//Get index flex state and wait for user to confirm by tilting right
-    while(!right)
-    {
-      gyroCheck();
-      flex1.read();
-      lcd.setCursor(0,0);
-      lcd.print("Flex Index: " + String(flex1.value));
-      lcd.setCursor(0,1);
-      lcd.print("Right to Confirm");
-      flex1.threshold = flex1.value;
-      delay(10);
-    }
-
-	//Print to serial for debugging
-    Serial.println("Index Flex = " + String(flex1.threshold));
-    lcd.clear();
-
-	//Get middle flex state and wait for user to confirm by tilting left
-    while(!left)
-    {
-      gyroCheck();
-      flex2.read();
-      lcd.setCursor(0,0);
-      lcd.print("Flex Middle: " + String(flex2.value));
-      lcd.setCursor(0,1);
-      lcd.print("Left to Confirm");
-      flex2.threshold = flex2.value;
-      delay(10);
-    }
-    
-	//Print to serial for debugging
-    Serial.println("Middle Flex = " + String(flex2.threshold));
-	
-	//Get ring flex state and wait for user to confirm by tilting right
-    while(!right)
-    {
-      gyroCheck();
-      flex3.read();
-      lcd.setCursor(0,0);
-      lcd.print("Flex Ring: " + String(flex3.value));
-      lcd.setCursor(0,1);
-      lcd.print("Right to Confirm");
-      flex3.threshold = flex3.value;
-      delay(10);
-    }
-    
-	//Print to serial for debugging
-    Serial.println("Ring Flex = " + String(flex2.threshold));
-	
-	//Get pinky flex state and wait for user to confirm by tilting left
-    while(!left)
-    {
-      gyroCheck();
-      flex4.read();
-      lcd.setCursor(0,0);
-      lcd.print("Flex Pinky: " + String(flex4.value));
-      lcd.setCursor(0,1);
-      lcd.print("Left to Confirm");
-      flex4.threshold = flex4.value;
-      delay(10);
-    }
-    
-	//Print to serial for debugging
-    Serial.println("Pinky Flex = " + String(flex2.threshold));
-
-    if( abs(flex0.rest - flex0.threshold) > 30 && abs(flex1.rest - flex1.threshold) > 30 && abs(flex2.rest - flex2.threshold) > 30 && abs(flex3.rest - flex3.threshold) > 30 && abs(flex4.rest - flex4.threshold) > 30)
-    {
-      break; 
-    }
-    else
-    {
-      lcd.clear();
-      lcd.setCursor(0,0);
-      lcd.print("Range of values");
-      lcd.setCursor(0,1);
-      lcd.print("too small");
-      delay(3000);
-      lcd.clear();
-      while(!right)
-      {
-        gyroCheck();
-        lcd.setCursor(0,0);
-        lcd.print("Tilt right"); 
-        lcd.setCursor(0,1);
-        lcd.print("to try again");
-      }
-    }
-
-  }
-
-  lcd.clear();
-
-  while(1)
-  {
-
-    while(!right)
-    {
-      gyroCheck();
-      lcd.setCursor(0,0);
-      lcd.print("Control Setup");
-      lcd.setCursor(0,1);
-      lcd.print("Right to cont.");
-    }
-
-    lcd.clear();
-
-    while(!left)
-    {
-      flex0.read();
-      flex1.read();
-      flex2.read();
-      flex3.read();
-      flex4.read();
-      gyroCheck();
-      lcd.setCursor(0,0);
-      lcd.print("Forward Flex Command");
-      lcd.setCursor(0,1);
-      lcd.print("Left to Confirm");
-      forwardState[0] = flex0.active;
-      forwardState[1] = flex1.active;
-      forwardState[2] = flex2.active;
-      forwardState[3] = flex3.active;
-      forwardState[4] = flex4.active;
-    }
-
-    lcd.clear();
-
-    while(!right)
-    {
-      flex0.read();
-      flex1.read();
-      flex2.read();
-      flex3.read();
-      flex4.read();
-      gyroCheck();
-      lcd.setCursor(0,0);
-      lcd.print("Backward Flex Command");
-      lcd.setCursor(0,1);
-      lcd.print("Right to Confirm");
-      backwardState[0] = flex0.active;
-      backwardState[1] = flex1.active;
-      backwardState[2] = flex2.active;
-      backwardState[3] = flex3.active;
-      backwardState[4] = flex4.active;
-    }
-
-    lcd.clear();
-    
-    //Confirm States
-    int check = 0;
-
-    for(int ii = 0; ii < 5; ii++)
-    { 
-      if(backwardState[ii] == forwardState[ii])
-        check += 1;
-    }
-    
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Forward state is:");
-    lcd.setCursor(0,1);
-    String forwardConfirm = "";
-    
-    if(forwardState[0] == 1){forwardConfirm += "th,";}
-    if(forwardState[1] == 1){forwardConfirm += "id,";}
-    if(forwardState[2] == 1){forwardConfirm += "mi,";}
-    if(forwardState[3] == 1){forwardConfirm += "ri,";}
-    if(forwardState[4] == 1){forwardConfirm += "pi,";}
-    lcd.print(forwardConfirm);
-    delay(3000);
-    
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Backward state is:");
-    lcd.setCursor(0,1);
-    String backwardConfirm = "";
-    
-    if(backwardState[0] == 1){backwardConfirm += "th,";}
-    if(backwardState[1] == 1){backwardConfirm += "id,";}
-    if(backwardState[2] == 1){backwardConfirm += "mi,";}
-    if(backwardState[3] == 1){backwardConfirm += "ri,";}
-    if(backwardState[4] == 1){backwardConfirm += "pi,";}
-    lcd.print(backwardConfirm);
-    delay(3000);
-    
-
-    if(check == 5)
-    {
-      lcd.setCursor(0,0);
-      lcd.print("Same states for");
-      lcd.setCursor(0,1);
-      lcd.print("forward & back!");
-      delay(3000);
-
-      while(!left)
-      {
-        lcd.clear();
-        gyroCheck();
-        lcd.setCursor(0,0);
-        lcd.print("Tilt left");
-        lcd.setCursor(0,1);
-        lcd.print("to try again");
-      }
-    }
-    else
-    {
-       Serial.print("Forward State = ");
-        for(int i = 0; i < 5; i++)
-        {
-          Serial.print(forwardState[i]);
-        }
-      
-      Serial.println("");
-      Serial.print("Backward State = ");
-        for(int i = 0; i < 5; i++)
-        {
-          Serial.print(backwardState[i]);
-        }
-      Serial.println("");
-      break;
-    }
-
-  }
-
 }
+
+void processingCommand()
+{
+  if(Serial.available() > 0)
+  {
+  String inputString = Serial.readStringUntil('$');
+  
+  if (inputString.length() > 0)
+  { 
+  
+  String checkStart = inputString.substring(0,2);
+  
+  if( checkStart == "!!") //Update Flex Values
+  {
+    String Flex0 = inputString.substring(2,4);
+    String Flex1 = inputString.substring(4,6);
+    String Flex2 = inputString.substring(6,8);
+    String Flex3 = inputString.substring(8,10);
+    String Flex4 = inputString.substring(10,12);
+    
+    EEPROM.write(0,Flex0.toInt());
+    EEPROM.write(1,Flex1.toInt());
+    EEPROM.write(2,Flex2.toInt());
+    EEPROM.write(3,Flex3.toInt());
+    EEPROM.write(4,Flex4.toInt());
+    flex0.threshold = Flex0.toInt();
+    flex1.threshold = Flex1.toInt();
+    flex2.threshold = Flex2.toInt();
+    flex3.threshold = Flex3.toInt();
+    flex4.threshold = Flex4.toInt();
+      
+  }
+  else if (checkStart == "##") //Update Gyro Values
+  {
+    String GyroLeft = inputString.substring(2,4);
+    String GyroRight = inputString.substring(4,6);
+    EEPROM.write(5,GyroLeft.toInt());
+    EEPROM.write(6,GyroRight.toInt());
+    gyroLeftThreshold = GyroLeft.toInt();
+    gyroRightThreshold = -GyroRight.toInt(); 
+  }
+  else if (checkStart == "@@")
+  {
+    for (int i = 0; i < 5; i++)
+    {
+      forwardState[i] = inputString.substring(2 + i, 3 + i).toInt();
+      EEPROM.write(i+7,forwardState[i]); 
+    }
+    
+    for (int i = 0; i < 5; i++)
+    {
+      backwardState[i] = inputString.substring(7 + i, 8 + i).toInt();
+      EEPROM.write(i+12,backwardState[i]); 
+    }
+    
+  }
+  
+  
+ }
+  }
+    
+}
+
 
 

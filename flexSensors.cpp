@@ -4,46 +4,55 @@
 flexSensors::flexSensors()
 {   //Default constructor
     pin = 0;
-    threshold = 950;
     rest = 0;
     value = 0;
     active = 0;
+    minimum = 850;
+    maximum = 1024;
+    threshold = 80;
 }
 
-flexSensors::flexSensors(int _pin, int _threshold)
+flexSensors::flexSensors(int _pin, int _minimum, int _maximum, int _threshold)
 {
     // Constructor with arguments
     pin = _pin;  
-    threshold = _threshold; 
     rest = 0;
     value = 0;
     active = 0;
+    minimum = _minimum;
+    maximum = _maximum;
+    threshold = _threshold;
 }
 
 
 void flexSensors::read()
 {   // Read raw input value from analog pin
-  long int x = 0;
+  long double x = 0;
   for(int i = 0; i<100; i++)
   {
     x += analogRead(pin); //This gets a small moving average
   }
      
   x /= 100;
+  x = floor( abs((x - minimum)/(maximum-minimum))*100);
   
-  int numDigits = x > 0 ? (int) log10 ((double) x) + 1 : 1;
+  if (x > 100)
+    value = 100;
+  else if (x < 0)
+    value = 0;
+  else
+    value = x;
   
-    if(numDigits == 3)
-      value = x;
+  //value = abs((x - minimum)/(maximum-minimum));
       
   if(threshold > rest)
   {
-    if (value > (threshold - 25)){active = 1;}
+    if (value > (threshold)){active = 1;}
     else{active = 0;}
   }
   else
   {
-    if(value < (threshold + 25)){active = 1;}
+    if(value < (threshold)){active = 1;}
     else{active = 0;} 
   }
   
